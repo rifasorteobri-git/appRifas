@@ -24,11 +24,11 @@ router.get('/log/administrador/lista', async (req, res) => {
 })
 
 //obtener administrador por id
-router.get('/log/administrador/:id', (req, res) => {
+router.get('/log/administrador/:id', async (req, res) => {
     const {id} = req.params;
     const query = 'SELECT * FROM usuario_administrador WHERE id_administrador = $1';
     try {
-        const resultado = db.query(query, [id]);
+        const resultado = await db.query(query, [id]);
         if (resultado.rows.length > 0) {
             res.json(resultado.rows[0]); // si solo esperas un resultado, puedes devolver solo uno
         } else {
@@ -85,7 +85,7 @@ router.put('log/administrador/editarContrasena/:id', (req, res) => {
             console.error('Error en la consulta:', err.message);
             return res.status(500).json({ message: 'Error en la base de datos' });
         }
-        if (result.rows.length === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Administrador no encontrado' });
         }
         const usuario = result.rows[0];
@@ -143,7 +143,7 @@ router.post('/login/administrador', (req, res) => {
     db.query(query, [correo_admin], (error, result) => {
         if (error) return res.status(500).json({ error: error.message });
 
-        if (result.rows.length === 0) {
+        if (result.rowCount === 0) {
            return res.status(401).json({ message: 'Credenciales incorrectas' }); 
         }
         const usuario = result.rows[0];
@@ -178,7 +178,7 @@ router.put('/log/administrador/editar_contra_administrador/:id', (req, res) => {
             console.error('Error al actualizar la contraseña:', error.message);
             return res.status(500).json({ message: 'Error al actualizar la contraseña' });
         }
-        if (result.rows.length === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Administrador no encontrado' });
         }
         res.json({ message: 'Se actualizó correctamente la contraseña del administrador' });
