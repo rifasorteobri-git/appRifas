@@ -76,7 +76,7 @@ router.post('/log/administrador/agregar', async (req, res) => {
 })
 
 //editar contraseña administrador master
-router.put('log/administrador/editarContrasena/:id', (req, res) => {
+router.put('/log/administrador/editarContrasena/:id', (req, res) => {
     const {id} = req.params;
     const {contra_actual, contra_nueva} = req.body;
     // Paso 1: Consultar la contraseña actual
