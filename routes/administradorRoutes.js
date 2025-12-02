@@ -125,7 +125,8 @@ router.delete('/log/administrador/borrar/:id', (req, res) => {
             console.error('Error al eliminar administrador:', error.message);
             return res.status(500).json({ message: 'Error al eliminar el administrador' });
         }
-        if (result.rows.length === 0) {
+        // Siempre usar rowCount para indicar cuantas filas afectó el query
+        if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Administrador no encontrado' });
         }
         res.json({ message: 'Se eliminó correctamente el administrador' });
