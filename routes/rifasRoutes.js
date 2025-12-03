@@ -57,6 +57,24 @@ router.get('/administrador/listarRifas', async (req, res) => {
   }
 });
 
+// Editar rifa
+router.put();
+
+// Eliminar rifa
+router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    // Primero eliminar los boletos asociados (si tu DB tiene FK con ON DELETE RESTRICT)
+    await supabase.from('boletos').delete().eq('rifa_id', id);
+    // Luego eliminar la rifa
+    const { error } = await supabase.from('rifas').delete().eq('id_rifas', id);
+    if (error) throw error;
+    res.json({ message: 'Rifa eliminada correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+})
+
 // Obtener boletos de una rifa
 router.get('/administrador/rifas/boletos/:id', async (req, res) => {
   try {
