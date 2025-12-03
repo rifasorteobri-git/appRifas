@@ -1,9 +1,8 @@
 const express = require('express');
-const dbConnect = require('../db/connect');
 //variable router para utilizar la solicitud http (GET/POST/PUT/DELETE) en express
 const router = express.Router();
 //llamada a la conexion de la base de datos
-const db = dbConnect();
+const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
 const generarBoletos = require('../utils/generarBoletos');
 
 //creación de rifa y generar boletos
@@ -14,7 +13,7 @@ router.post('/log/administrador/crearRifas', async (req, res) => {
     if (!titulo || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
 
     // crear rifa
-    const { data: rifa, error: errR } = await db
+    const { data: rifa, error: errR } = await supabase
       .from('rifas')
       .insert({ titulo, cantidad_boletos: n, estado: 'activa' })
       .select()
@@ -36,7 +35,7 @@ router.post('/log/administrador/crearRifas', async (req, res) => {
     const BATCH = 300;
     for (let i = 0; i < inserts.length; i += BATCH) {
       const batch = inserts.slice(i, i + BATCH);
-      const { error: errIns } = await db.from('boletos').insert(batch);
+      const { error: errIns } = await supabase.from('boletos').insert(batch);
       if (errIns) throw errIns;
     }
 
@@ -50,7 +49,7 @@ router.post('/log/administrador/crearRifas', async (req, res) => {
 // Listar rifas
 router.get('/log/administrador/listarRifas', async (req, res) => {
   try {
-    const { data, error } = await db.from('rifas').select('*').order('id_rifas', { ascending: false });
+    const { data, error } = await supabase.from('rifas').select('*').order('id_rifas', { ascending: false });
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -62,7 +61,7 @@ router.get('/log/administrador/listarRifas', async (req, res) => {
 router.get('/log/administrador/rifas/boletos/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { data, error } = await db.from('boletos').select('*').eq('rifa_id', id).order('id_boletos');
+    const { data, error } = await supabase.from('boletos').select('*').eq('rifa_id', id).order('id_boletos');
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -77,7 +76,7 @@ router.post('/log/administrador/rifas/sorteo/:id', async (req, res) => {
     if (!id) return res.status(400).json({ error: 'id rifa inválido' });
 
     // 1) Obtener todos los boletos (se puede filtrar para solo vendidos si lo deseas)
-    const { data: all, error: errAll } = await db
+    const { data: all, error: errAll } = await supabase
       .from('boletos')
       .select('numero_boleto, nombre_cliente, apellido_cliente, telefono_cliente')
       .eq('rifa_id', id);
@@ -103,7 +102,7 @@ router.post('/log/administrador/rifas/sorteo/:id', async (req, res) => {
     if (errG) throw errG;
 
     // actualizar boleto ganador (set ganador true y estado)
-    const { error: errUpdB } = await db
+    const { error: errUpdB } = await supabase
       .from('boletos')
       .update({ ganador: true, estado: 'vendido' })
       .eq('rifa_id', id)
@@ -111,7 +110,7 @@ router.post('/log/administrador/rifas/sorteo/:id', async (req, res) => {
     if (errUpdB) throw errUpdB;
 
     // actualizar rifas: numero_ganador y estado
-    const { data: updatedRifa, error: errUpdR } = await db
+    const { data: updatedRifa, error: errUpdR } = await supabase
       .from('rifas')
       .update({ numero_ganador: ganador.numero_boleto, estado: 'sorteada' })
       .eq('id_rifas', id)

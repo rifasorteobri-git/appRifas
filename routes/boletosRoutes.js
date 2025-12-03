@@ -1,8 +1,7 @@
 const express = require('express');
-const dbConnect = require('../db/connect');
 const router = express.Router();
 //llamada a la conexion de la base de datos
-const db = dbConnect();
+const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
 
 // Asignar boletos (llama a la RPC)
 router.post('/log/administrador/boletos/asignar/:rifaId', async (req, res) => {
@@ -12,7 +11,7 @@ router.post('/log/administrador/boletos/asignar/:rifaId', async (req, res) => {
         const cant = parseInt(cantidad, 10);
         if (!nombre || !apellido || isNaN(cant) || cant <= 0) return res.status(400).json({ error: 'Datos inválidos' });
 
-        const { data, error } = await db.rpc('asignar_boletos_a_persona', {
+        const { data, error } = await supabase.rpc('asignar_boletos_a_persona', {
         p_rifa_id: rifaId,
         p_nombre_cliente: nombre,
         p_apellido_cliente: apellido,
