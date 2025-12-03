@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const dbConnect = require('./db/connect');
+//const dbConnect = require('./db/connect');
 const administradorRoutes = require('./routes/administradorRoutes');
 const boletosRouter = require('./routes/boletosRoutes');
 const rifasRoutes = require('./routes/rifasRoutes');
@@ -17,7 +17,7 @@ app.use(bodyParser.json());
 app.use(express.json({ limit: '50mb' })); // Middleware para parsear JSON en el body de las peticiones
 
 //Conectar base de datos
-dbConnect();
+//dbConnect();
 
 //Rutas de los endpoints
 app.use(
