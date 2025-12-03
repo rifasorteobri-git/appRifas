@@ -6,7 +6,7 @@ const supabase = require('../db/supabaseClient'); //conexión a Supabase API (se
 const generarBoletos = require('../utils/generarBoletos');
 
 //creación de rifa y generar boletos
-router.post('/log/administrador/crearRifas', async (req, res) => {
+router.post('/administrador/crearRifas', async (req, res) => {
   try {
     const { titulo, cantidad_boletos } = req.body;
     const n = parseInt(cantidad_boletos, 10);
@@ -47,7 +47,7 @@ router.post('/log/administrador/crearRifas', async (req, res) => {
 });
 
 // Listar rifas
-router.get('/log/administrador/listarRifas', async (req, res) => {
+router.get('/administrador/listarRifas', async (req, res) => {
   try {
     const { data, error } = await supabase.from('rifas').select('*').order('id_rifas', { ascending: false });
     if (error) throw error;
@@ -58,7 +58,7 @@ router.get('/log/administrador/listarRifas', async (req, res) => {
 });
 
 // Obtener boletos de una rifa
-router.get('/log/administrador/rifas/boletos/:id', async (req, res) => {
+router.get('/administrador/rifas/boletos/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { data, error } = await supabase.from('boletos').select('*').eq('rifa_id', id).order('id_boletos');
@@ -70,7 +70,7 @@ router.get('/log/administrador/rifas/boletos/:id', async (req, res) => {
 });
 
 // Endpoint FINALIZAR SORTEO (backend elige ganador de forma segura)
-router.post('/log/administrador/rifas/sorteo/:id', async (req, res) => {
+router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id rifa inválido' });

@@ -4,7 +4,7 @@ const router = express.Router();
 const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
 
 // Asignar boletos (llama a la RPC)
-router.post('/log/administrador/boletos/asignar/:rifaId', async (req, res) => {
+router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
     try {
         const rifaId = parseInt(req.params.rifaId, 10);
         const { nombre, apellido, telefono, cantidad } = req.body;
