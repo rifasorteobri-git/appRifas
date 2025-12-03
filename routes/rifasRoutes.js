@@ -58,7 +58,40 @@ router.get('/administrador/listarRifas', async (req, res) => {
 });
 
 // Editar rifa
+router.put('/administrador/editarRifa/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const {titulo, cantidad_boletos, estado, numero_actual, numero_ganador} = req.body;
 
+    // Construir solo los campos enviados (evita sobreescrituras no deseadas)
+    const updateFields = {};
+
+    if (titulo) updateFields.titulo = titulo;
+    if (cantidad_boletos) updateFields.cantidad_boletos = cantidad_boletos;
+    if (estado) updateFields.estado = estado;
+    if (numero_actual !== undefined) updateFields.numero_actual = numero_actual;
+    if (numero_ganador !== undefined) updateFields.numero_ganador = numero_ganador;
+
+    // Si no se envió nada
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ error: 'No hay campos para actualizar' });
+    }
+
+    // Ejecutar actualización
+    const { data, error } = await supabase.from('rifas').update(updateFields).eq('id_rifas', id).select().single();
+
+    if (error) throw error;
+
+    res.json({
+      message: 'Rifa actualizada correctamente',
+      rifa: data
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || err });
+  }
+});
 
 // Eliminar rifa
 router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
