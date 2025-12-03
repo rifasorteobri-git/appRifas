@@ -2,8 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dbConnect = require('./db/connect');
-const administradorRoutes = require('./routes/administradorRoutes')
-const supabase = require('./db/supabaseClient');
+const administradorRoutes = require('./routes/administradorRoutes');
+const boletosRouter = require('./routes/boletosRoutes');
+const rifasRoutes = require('./routes/rifasRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -20,7 +21,9 @@ dbConnect();
 
 //Rutas de los endpoints
 app.use(
-    administradorRoutes
+    administradorRoutes,
+    boletosRouter,
+    rifasRoutes
 );
 
 //Crear la raíz de la API (una vez subido a vercel)
