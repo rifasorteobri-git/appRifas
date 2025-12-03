@@ -58,7 +58,7 @@ router.get('/administrador/listarRifas', async (req, res) => {
 });
 
 // Editar rifa
-router.put();
+
 
 // Eliminar rifa
 router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
@@ -73,7 +73,7 @@ router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || err });
   }
-})
+});
 
 // Obtener boletos de una rifa
 router.get('/administrador/rifas/boletos/:id', async (req, res) => {
