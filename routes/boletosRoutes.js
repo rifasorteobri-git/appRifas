@@ -9,13 +9,13 @@ router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
         const rifaId = parseInt(req.params.rifaId, 10);
         const { nombre, apellido, telefono, cantidad } = req.body;
         const cant = parseInt(cantidad, 10);
-        if (!nombre || !apellido || isNaN(cant) || cant <= 0) return res.status(400).json({ error: 'Datos inválidos' });
+        if (!nombre || !apellido || !telefono || isNaN(cant) || cant <= 0) return res.status(400).json({ error: 'Datos inválidos' });
 
         const { data, error } = await supabase.rpc('asignar_boletos_a_persona', {
         p_rifa_id: rifaId,
         p_nombre_cliente: nombre,
         p_apellido_cliente: apellido,
-        p_telefono_cliente: telefono || null,
+        p_telefono_cliente: telefono,
         p_cantidad_boletos: cant
         });
 
