@@ -93,7 +93,7 @@ router.get('/administrador/listarRifas', async (req, res) => {
   }
 });*/
 
-router.put('/administrador/editarRifas/:id', async (req, res) => {
+router.put('/administrador/editarRifa/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { titulo, cantidad_boletos } = req.body;
@@ -159,17 +159,14 @@ router.put('/administrador/editarRifas/:id', async (req, res) => {
     // -------------------------------------------------------
     // CASO 3: SI SOLO SE CAMBIA EL TITULO (SIN CAMBIAR CANTIDAD)
     // -------------------------------------------------------
-    const { error: errUpdate } = await supabase
-      .from('rifas')
-      .update({ titulo })
-      .eq('id_rifas', id);
+    const { error: errUpdate } = await supabase.from('rifas').update({ titulo }).eq('id_rifas', id);
 
     if (errUpdate) throw errUpdate;
 
     return res.json({
       message: 'Rifa actualizada correctamente',
-      nueva_cantidad: nuevoTotal,
-      titulo
+      titulo,
+      nueva_cantidad: nuevoTotal
     });
 
   } catch (err) {
