@@ -142,7 +142,7 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
     // -------------------------------------------------------
     if (nuevoTotal < actualTotal) {
 
-      const { data: reduccion, error: errReduccion } = await supabase.rpc(
+      const { data, errReduccion } = await supabase.rpc(
         'reducir_boletos_rifa',
         {
           p_rifa_id: id,
@@ -154,6 +154,8 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
         console.error(errReduccion);
         return res.status(400).json({ error: errReduccion.message });
       }
+
+      res.json({ eliminados: data });
     }
 
     // -------------------------------------------------------
