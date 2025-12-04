@@ -58,7 +58,7 @@ router.get('/administrador/listarRifas', async (req, res) => {
 });
 
 // Editar rifa
-router.put('/administrador/editarRifa/:id', async (req, res) => {
+/*router.put('/administrador/editarRifa/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const {titulo, cantidad_boletos, estado, numero_actual, numero_ganador} = req.body;
@@ -90,6 +90,91 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || err });
+  }
+});*/
+
+router.put('/administrador/editarRifas/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { titulo, cantidad_boletos } = req.body;
+
+    const nuevoTotal = parseInt(cantidad_boletos, 10);
+    if (!titulo || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
+      return res.status(400).json({ error: 'Datos inválidos' });
+    }
+
+    // Obtener rifa actual
+    const { data: rifaActual, error: errRifa } = await supabase.from('rifas').select('*').eq('id_rifas', id).single();
+
+    if (errRifa || !rifaActual) {
+      return res.status(400).json({ error: 'La rifa no existe' });
+    }
+
+    const actualTotal = rifaActual.cantidad_boletos;
+
+    // -------------------------------------------------------
+    // CASO 1: AUMENTAR BOLETOS
+    // -------------------------------------------------------
+    if (nuevoTotal > actualTotal) {
+      const cantidadNueva = nuevoTotal - actualTotal;
+
+      // Generar nuevos boletos con la misma lógica del backend
+      const nuevosNumeros = generarBoletos(cantidadNueva);
+
+      // Llamar RPC de aumento
+      const { data: aumento, error: errAumento } = await supabase.rpc(
+        'aumentar_boletos_rifa',
+        {
+          p_rifa_id: id,
+          p_nueva_cantidad: nuevoTotal,
+          p_boletos_nuevos: nuevosNumeros // tu función del backend
+        }
+      );
+
+      if (errAumento) {
+        console.error(errAumento);
+        return res.status(400).json({ error: errAumento.message });
+      }
+    }
+
+    // -------------------------------------------------------
+    // CASO 2: REDUCIR BOLETOS
+    // -------------------------------------------------------
+    if (nuevoTotal < actualTotal) {
+
+      const { data: reduccion, error: errReduccion } = await supabase.rpc(
+        'reducir_boletos_rifa',
+        {
+          p_rifa_id: id,
+          p_nueva_cantidad: nuevoTotal
+        }
+      );
+
+      if (errReduccion) {
+        console.error(errReduccion);
+        return res.status(400).json({ error: errReduccion.message });
+      }
+    }
+
+    // -------------------------------------------------------
+    // CASO 3: SI SOLO SE CAMBIA EL TITULO (SIN CAMBIAR CANTIDAD)
+    // -------------------------------------------------------
+    const { error: errUpdate } = await supabase
+      .from('rifas')
+      .update({ titulo })
+      .eq('id_rifas', id);
+
+    if (errUpdate) throw errUpdate;
+
+    return res.json({
+      message: 'Rifa actualizada correctamente',
+      nueva_cantidad: nuevoTotal,
+      titulo
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message || err });
   }
 });
 
