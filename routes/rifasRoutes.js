@@ -135,6 +135,8 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
         console.error(errAumento);
         return res.status(400).json({ error: errAumento.message });
       }
+
+      res.json({ creados: aumento });
     }
 
     // -------------------------------------------------------
