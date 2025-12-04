@@ -155,7 +155,7 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
         return res.status(400).json({ error: errReduccion.message });
       }
 
-      res.json({ eliminados: reduccion });
+      //res.json({ eliminados: reduccion });
     }
 
     // -------------------------------------------------------
