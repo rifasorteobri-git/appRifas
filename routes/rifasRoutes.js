@@ -135,8 +135,8 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
         console.error(errAumento);
         return res.status(400).json({ error: errAumento.message });
       }
-
-      res.json({ creados: aumento });
+      //Para saber los boletos que se aumentaron
+      //res.json({ creados: aumento });
     }
 
     // -------------------------------------------------------
@@ -156,8 +156,8 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
         console.error(errReduccion);
         return res.status(400).json({ error: errReduccion.message });
       }
-
-      res.json({ eliminados: reduccion });
+      // Para saber los boletos que se redujeron
+      //res.json({ eliminados: reduccion });
     }
 
     // -------------------------------------------------------
