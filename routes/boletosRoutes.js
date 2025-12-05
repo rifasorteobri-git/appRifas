@@ -34,7 +34,7 @@ router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
 //Buscar por nombre
 router.get('/administrador/boletos/buscar/:nombre', async (req, res) => {
     try {
-        const nombre = req.params;
+        const nombre = req.params.nombre;
         const { data, error } = await supabase
         .from('boletos')
         .select('*')
