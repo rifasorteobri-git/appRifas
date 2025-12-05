@@ -238,7 +238,7 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
 
 //Revertir sorteo
 router.put('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
-  const id = req.params;
+  const { id } = req.params;
   try {
     if (!id) return res.status(400).json({ error: 'ID de rifa inválido' });
     // Obtener la rifa
