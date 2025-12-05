@@ -38,7 +38,7 @@ router.get('/administrador/boletos/buscar/:nombre', async (req, res) => {
         const { data, error } = await supabase
         .from('boletos')
         .select('*')
-        .ilike('nombre', `%${nombre}%`);
+        .ilike('nombre_cliente', `%${nombre}%`);
         if (error) throw error;
         res.json(data);
     } catch (err) {
