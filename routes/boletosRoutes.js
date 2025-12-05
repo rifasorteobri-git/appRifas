@@ -33,15 +33,33 @@ router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
 
 //Buscar por nombre
 router.get('/administrador/boletos/buscar/:rifa_id/:nombre', async (req, res) => {
+    const {rifa_id, nombre} = req.params;
     try {
-        const {rifa_id, nombre} = req.params;
         const { data, error } = await supabase
         .from('boletos')
         .select('*')
         .eq('rifa_id', rifa_id)
         .ilike('nombre_cliente', `%${nombre}%`);
+
         if (error) throw error;
         res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message || err });
+    }
+})
+
+//Eliminar un boleto y volverlo a poner en libre
+router.put('/administrador/boletos/liberarBoleto/:id_boleto', async (req, res) => {
+    const { id_boleto } = req.params;
+    try {
+        const { data, error } = await supabase
+        .rpc('liberar_boleto', { p_id_boleto: id_boleto });
+
+        if (error) throw error;
+        res.json({
+            mensaje: 'Boleto liberado correctamente',
+            boleto: data[0]
+        });
     } catch (err) {
         res.status(500).json({ error: err.message || err });
     }
