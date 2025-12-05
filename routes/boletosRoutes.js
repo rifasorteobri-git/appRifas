@@ -31,4 +31,19 @@ router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
     }
 });
 
+//Buscar por nombre
+router.get('/administrador/boletos/buscar/:nombre', async (req, res) => {
+    try {
+        const nombre = req.query.nombre;
+        const { data, error } = await supabase
+        .from('boletos')
+        .select('*')
+        .ilike('nombre', `%${nombre}%`);
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message || err });
+    }
+})
+
 module.exports = router;
