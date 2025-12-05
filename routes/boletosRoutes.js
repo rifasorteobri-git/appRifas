@@ -16,7 +16,7 @@ router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
         p_nombre_cliente: nombre,
         p_apellido_cliente: apellido,
         p_telefono_cliente: telefono,
-        p_cantidad_boletos: cant
+        p_cantidad: cant
         });
 
         if (error) {
