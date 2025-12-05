@@ -13,9 +13,9 @@ router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
 
         const { data, error } = await supabase.rpc('asignar_boletos_a_persona', {
         p_rifa_id: rifaId,
-        p_nombre_cliente: nombre,
-        p_apellido_cliente: apellido,
-        p_telefono_cliente: telefono,
+        p_nombre: nombre,
+        p_apellido: apellido,
+        p_telefono: telefono,
         p_cantidad: cant
         });
 
