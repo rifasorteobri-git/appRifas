@@ -232,7 +232,74 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
       rifa: updatedRifa
     });
   } catch (err) {
-    console.error('error sorteo', err);
+    res.status(500).json({ error: err.message || err });
+  }
+});
+
+//Revertir sorteo
+router.put('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
+  const id = req.params;
+  try {
+    if (!id) return res.status(400).json({ error: 'ID de rifa inválido' });
+    // Obtener la rifa
+    const { data: rifa, error: errRifa } = await supabase
+      .from('rifas')
+      .select('*')
+      .eq('id_rifas', id)
+      .single();
+
+    if (errRifa) throw errRifa;
+
+    if (!rifa) return res.status(404).json({ error: 'Rifa no encontrada' });
+
+    if (!rifa.numero_ganador) {
+      return res.status(400).json({
+        error: "Esta rifa no tiene ganador registrado o no ha sido sorteada"
+      });
+    }
+
+    const numeroGanador = rifa.numero_ganador;
+
+    // Eliminar ganador de la tabla ganadores
+    const { error: errDelWinner } = await supabase
+      .from('ganadores')
+      .delete()
+      .eq('rifa_id', id);
+
+    if (errDelWinner) throw errDelWinner;
+
+    // Reiniciar el boleto ganador
+    const { error: errResetBoleto } = await supabase
+      .from('boletos')
+      .update({
+        ganador: false,
+        estado: 'vendido' // o 'vendido' si así manejas tus estados
+      })
+      .eq('rifa_id', id)
+      .eq('numero_boleto', numeroGanador);
+
+    if (errResetBoleto) throw errResetBoleto;
+
+    // Actualizar rifa: volver a activa y borrar número ganador
+    const { error: errResetRifa } = await supabase
+      .from('rifas')
+      .update({
+        estado: 'activa',
+        numero_ganador: null
+      })
+      .eq('id_rifas', id);
+
+    if (errResetRifa) throw errResetRifa;
+
+    return res.json({
+      mensaje: 'Sorteo revertido correctamente',
+      detalles: {
+        rifa_id: id,
+        boleto_revertido: numeroGanador
+      }
+    });
+
+  } catch (err) {
     res.status(500).json({ error: err.message || err });
   }
 });
