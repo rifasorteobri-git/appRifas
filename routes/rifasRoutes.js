@@ -206,7 +206,7 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
     // actualizar boleto ganador (set ganador true y estado)
     const { error: errUpdB } = await supabase
       .from('boletos')
-      .update({ ganador: true, estado: 'vendido' })
+      .update({ ganador: true, estado: 'ganador' })
       .eq('rifa_id', id)
       .eq('numero_boleto', ganador.numero_boleto);
     if (errUpdB) throw errUpdB;
