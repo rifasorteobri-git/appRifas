@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const administradorRoutes = require('./routes/administradorRoutes');
 const boletosRouter = require('./routes/boletosRoutes');
 const rifasRoutes = require('./routes/rifasRoutes');
+const productosRoutes = require('./routes/productosRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -23,7 +24,8 @@ app.use(express.json({ limit: '50mb' })); // Middleware para parsear JSON en el 
 app.use(
     administradorRoutes,
     boletosRouter,
-    rifasRoutes
+    rifasRoutes,
+    productosRoutes
 );
 
 //Crear la raíz de la API (una vez subido a vercel)

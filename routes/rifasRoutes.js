@@ -52,7 +52,7 @@ router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (re
     const { titulo, cantidad_boletos, descripcion } = req.body;
     const n = parseInt(cantidad_boletos, 10);
     
-    if (!titulo || !descripcion || !urlPublica || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
+    if (!titulo || !descripcion || !urlPublica || !imagenNombreRifa || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
 
     // crear rifa
     const { data: rifa, error: errR } = await supabase
@@ -83,7 +83,6 @@ router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (re
 
     res.json({ rifa, boletos: numeros });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message || err });
   }
 });
@@ -223,7 +222,6 @@ router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async 
     });
 
   } catch (err) {
-    console.error(err);
     return res.status(500).json({ error: err.message || err });
   }
 });
