@@ -106,7 +106,7 @@ router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async 
     const { titulo, cantidad_boletos, descripcion } = req.body;
 
     const nuevoTotal = parseInt(cantidad_boletos, 10);
-    if (!titulo || descripcion || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
+    if (!titulo || !descripcion || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
       return res.status(400).json({ error: 'Datos inválidos' });
     }
 
@@ -250,7 +250,7 @@ router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
       console.error('Error al eliminar la imagen de Supabase:', deleteError);
       return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
     }
-    
+
     // Primero eliminar los boletos asociados (si tu DB tiene FK con ON DELETE RESTRICT)
     await supabase.from('boletos').delete().eq('rifa_id', id);
     // Luego eliminar la rifa
