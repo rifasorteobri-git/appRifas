@@ -4,18 +4,60 @@ const router = express.Router();
 //llamada a la conexion de la base de datos
 const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
 const generarBoletos = require('../utils/generarBoletos');
+const sharp = require('sharp'); //Necesario para convertir el buffer
+const multer = require('multer');
+const upload = multer(); // Usamos memoria (sin archivos físicos)
 
 //creación de rifa y generar boletos
-router.post('/administrador/crearRifas', async (req, res) => {
+router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (req, res) => {
   try {
-    const { titulo, cantidad_boletos } = req.body;
+    if (!req.file) {
+        console.log('No se ha proporcionado ninguna imagen');
+        return res.status(400).json({ message: 'No se ha proporcionado ninguna imagen.' });
+    }
+
+    const imagenNombreRifa = req.file.originalname;
+
+    const { data: existente, error: existingError } = await supabase
+        .storage
+        .from('imagen-rifas')
+        .list('', { search: imagenNombreRifa });
+    
+    if (existingError) {
+        console.error('Error al verificar existencia de imagen:', existingError.message);
+        return res.status(500).json({ message: 'Error al verificar la existencia de la imagen en Supabase.' });
+    }
+
+    if (existente.length > 0) {
+        console.log('La imagen ya existe en Supabase');
+        return res.status(400).json({ message: 'Esta imagen ya está registrada en la base de datos. Por favor, cargue una imagen con otro nombre.' });
+    }
+
+    const buffer = await sharp(req.file.buffer).toBuffer();
+    const { error: uploadError } = await supabase
+        .storage
+        .from('imagen-rifas')
+        .upload(imagenNombreRifa, buffer, {
+            contentType: req.file.mimetype,
+            upsert: false
+        });
+    
+    if (uploadError) {
+        console.error('Error al subir la imagen a Supabase:', uploadError.message);
+        return res.status(500).json({ message: 'Error al subir la imagen a Supabase.' });
+    }
+
+    const urlPublica = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-rifas/${imagenNombreRifa}`;
+
+    const { titulo, cantidad_boletos, descripcion } = req.body;
     const n = parseInt(cantidad_boletos, 10);
-    if (!titulo || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
+    
+    if (!titulo || !descripcion || !urlPublica || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
 
     // crear rifa
     const { data: rifa, error: errR } = await supabase
       .from('rifas')
-      .insert({ titulo, cantidad_boletos: n, estado: 'activa' })
+      .insert({ titulo, cantidad_boletos: n, estado: 'activa', descripcion, urlPublica })
       .select()
       .single();
 
