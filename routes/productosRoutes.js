@@ -141,7 +141,7 @@ router.put('/administrador/editarProducto/:id', upload.single('imagenProductos')
 //Listar productos
 router.get('/administrador/listarProductos', async (req, res) => {
     try {
-        const {data, error} = await supabase.from('productos').select('*').order('nombre_producto', {ascending: false});
+        const {data, error} = await supabase.from('productos').select('*').order('nombre_producto', {ascending: true});
         if (error) throw error;
         res.json(data);
     } catch(err) {
