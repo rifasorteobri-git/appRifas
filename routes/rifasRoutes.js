@@ -47,17 +47,17 @@ router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (re
         return res.status(500).json({ message: 'Error al subir la imagen a Supabase.' });
     }
 
-    const urlPublica = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-rifas/${imagenNombreRifa}`;
+    const url_imagen_rifa = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-rifas/${imagenNombreRifa}`;
 
     const { titulo, cantidad_boletos, descripcion } = req.body;
     const n = parseInt(cantidad_boletos, 10);
     
-    if (!titulo || !descripcion || !urlPublica || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
+    if (!titulo || !descripcion || !url_imagen_rifa || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
 
     // crear rifa
     const { data: rifa, error: errR } = await supabase
       .from('rifas')
-      .insert({ titulo, cantidad_boletos: n, estado: 'activa', descripcion, urlPublica })
+      .insert({ titulo, cantidad_boletos: n, estado: 'activa', descripcion, url_imagen_rifa })
       .select()
       .single();
 
