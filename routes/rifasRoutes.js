@@ -100,13 +100,13 @@ router.get('/administrador/listarRifas', async (req, res) => {
 });
 
 // Editar rifa
-router.put('/administrador/editarRifa/:id', async (req, res) => {
+router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { titulo, cantidad_boletos } = req.body;
+    const { titulo, cantidad_boletos, descripcion } = req.body;
 
     const nuevoTotal = parseInt(cantidad_boletos, 10);
-    if (!titulo || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
+    if (!titulo || descripcion || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
       return res.status(400).json({ error: 'Datos inválidos' });
     }
 
@@ -118,6 +118,48 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
     }
 
     const actualTotal = rifaActual.cantidad_boletos;
+    const oldImageUrl = rifaActual.url_imagen_rifa;
+    const oldImageName = rifaActual.nombre_imagen_rifa;
+
+    let nuevaUrl = oldImageUrl;
+    let nuevoNombreImagen = oldImageName;
+
+    if (req.file) {
+        const imagenNombreRifa = req.file.originalname;
+
+        const { data: existente } = await supabase
+            .storage
+            .from('imagen-rifas')
+            .list('', { search: imagenNombreRifa });
+
+        if (existente.length > 0) {
+            return res.status(400).json({ message: 'Esta imagen ya está registrada en la base de datos. Por favor, cargue una imagen con otro nombre.' });
+        }
+
+        const buffer = await sharp(req.file.buffer).toBuffer();
+        const { error: uploadError } = await supabase
+            .storage
+            .from('imagen-rifas')
+            .upload(imagenNombreRifa, buffer, {
+                contentType: req.file.mimetype,
+                upsert: false
+            });
+
+        if (uploadError) {
+            console.error('Error al subir la imagen a Supabase:', uploadError);
+            return res.status(500).json({ message: 'Error al subir la imagen a Supabase' });
+        }
+
+        nuevaUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-rifas/${imagenNombreRifa}`;
+        nuevoNombreImagen = imagenNombreRifa;
+
+        if (oldImageName) {
+            await supabase
+                .storage
+                .from('imagen-rifas')
+                .remove([oldImageName]);
+        }
+    }
 
     // -------------------------------------------------------
     // CASO 1: AUMENTAR BOLETOS
@@ -170,7 +212,7 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
     // -------------------------------------------------------
     // CASO 3: SI SOLO SE CAMBIA EL TITULO (SIN CAMBIAR CANTIDAD)
     // -------------------------------------------------------
-    const { error: errUpdate } = await supabase.from('rifas').update({ titulo }).eq('id_rifas', id);
+    const { error: errUpdate } = await supabase.from('rifas').update({ titulo, descripcion, url_imagen_rifa:nuevaUrl, nombre_imagen_rifa:nuevoNombreImagen }).eq('id_rifas', id);
 
     if (errUpdate) throw errUpdate;
 
@@ -190,6 +232,25 @@ router.put('/administrador/editarRifa/:id', async (req, res) => {
 router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
+    // Obtener nombre de la imagen
+    const { data: nombreImagenRifa, error: errRifa } = await supabase.from('rifas').select('nombre_imagen_rifa').eq('id_rifas', id).single();
+    
+    if (errRifa || !nombreImagenRifa) {
+      return res.status(400).json({ error: 'Imagen no existe' });
+    }
+
+    const nombreImagen = nombreImagenRifa.nombre_imagen_rifa
+    // Eliminar la imagen desde Supabase Storage
+    const { error: deleteError } = await supabase
+      .storage
+      .from('imagen-rifas')
+      .remove([nombreImagen]);
+
+    if (deleteError) {
+      console.error('Error al eliminar la imagen de Supabase:', deleteError);
+      return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
+    }
+    
     // Primero eliminar los boletos asociados (si tu DB tiene FK con ON DELETE RESTRICT)
     await supabase.from('boletos').delete().eq('rifa_id', id);
     // Luego eliminar la rifa
