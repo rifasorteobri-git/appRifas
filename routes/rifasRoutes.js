@@ -110,6 +110,18 @@ router.get('/administrador/obtenerRifa/:id', async (req, res) => {
   }
 })
 
+//Obtener el total de vendidos
+router.get('/administrador/obtenerVendidosRifa/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase.from('boletos').select('*', {count: 'exact', head: true}).eq('rifa_id', id).eq('estado', 'vendido');
+    if (error) throw error;
+    res.json(data);
+  } catch(err) {
+    res.status(500).json({ error: err.message || err });
+  }
+})
+
 // Editar rifa
 router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async (req, res) => {
   try {
