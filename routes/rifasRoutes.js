@@ -98,6 +98,18 @@ router.get('/administrador/listarRifas', async (req, res) => {
   }
 });
 
+//Obtener una sola rifa
+router.get('/administrador/obtenerRifa/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase.from('rifas').select('*').eq('id_rifas', id).single();
+    if (error) throw error;
+    res.json(data);
+  } catch(err) {
+    res.status(500).json({ error: err.message || err });
+  }
+})
+
 // Editar rifa
 router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async (req, res) => {
   try {
