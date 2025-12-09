@@ -114,8 +114,7 @@ router.get('/administrador/obtenerRifa/:id', async (req, res) => {
 router.get('/administrador/obtenerVendidosRifa/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const v = 'vendido';
-    const { data, error } = await supabase.from('boletos').select('*', {count: 'exact', head: true}).eq('rifa_id', id).eq('estado', v);
+    const { data, error } = await supabase.from('boletos').select('*', {count: 'exact', head: true}).eq('rifa_id', id).eq('estado', 'vendido');
     if (error) throw error;
     res.json({vendidos: data});
   } catch(err) {
