@@ -7,15 +7,15 @@ const supabase = require('../db/supabaseClient'); //conexión a Supabase API (se
 router.post('/administrador/boletos/asignar/:rifaId', async (req, res) => {
     try {
         const rifaId = parseInt(req.params.rifaId, 10);
-        const { nombre, apellido, telefono, cantidad } = req.body;
+        const { nombre_cliente, apellido_cliente, telefono_cliente, cantidad } = req.body;
         const cant = parseInt(cantidad, 10);
         if (!nombre || !apellido || !telefono || isNaN(cant) || cant <= 0) return res.status(400).json({ error: 'Datos inválidos' });
 
         const { data, error } = await supabase.rpc('asignar_boletos_a_persona', {
         p_rifa_id: rifaId,
-        p_nombre: nombre,
-        p_apellido: apellido,
-        p_telefono: telefono,
+        p_nombre: nombre_cliente,
+        p_apellido: apellido_cliente,
+        p_telefono: telefono_cliente,
         p_cantidad: cant
         });
 
