@@ -98,6 +98,28 @@ router.get('/administrador/listarRifas', async (req, res) => {
   }
 });
 
+// Listar rifas activas modo publico
+router.get('/publico/rifas/activas', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('rifas').select('*').eq('condicion', "Visible").order('id_rifas', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+});
+
+// Listar rifas finalizadas modo publico
+router.get('/publico/rifas/inactivas', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('rifas').select('*').eq('condicion', "No visible").order('id_rifas', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+});
+
 //Obtener una sola rifa
 router.get('/administrador/obtenerRifa/:id', async (req, res) => {
   try {
