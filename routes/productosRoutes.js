@@ -126,7 +126,7 @@ router.put('/administrador/editarProducto/:id', upload.single('imagenProductos')
             }
         }
 
-        const { error: errUpdate } = await supabase.from('productos').update({nombre_producto, url_imagen_producto:nuevaUrl, nombre_imagen_producto:nuevoNombreImagen});
+        const { error: errUpdate } = await supabase.from('productos').update({nombre_producto, url_imagen_producto:nuevaUrl, nombre_imagen_producto:nuevoNombreImagen}).eq('id_productos', id);
 
         if (errUpdate) throw errUpdate;
 
@@ -154,7 +154,7 @@ router.delete('/administrador/eliminarProducto/:id', async (req, res) => {
     try {
         const {id} = req.params;
         // Obtener nombre de la imagen
-        const { data: nombreImagenProducto, error: errProducto } = await supabase.from('productos').select('nombre_imagen_producto').eq('id_productos').single();
+        const { data: nombreImagenProducto, error: errProducto } = await supabase.from('productos').select('nombre_imagen_producto').eq('id_productos', id).single();
 
         if (errProducto || !nombreImagenProducto) {
             return res.status(400).json({ error: 'Imagen no existe' });
