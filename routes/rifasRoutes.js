@@ -49,15 +49,15 @@ router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (re
 
     const urlPublica = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-rifas/${imagenNombreRifa}`;
 
-    const { titulo, cantidad_boletos, descripcion, condicion } = req.body;
+    const { titulo, cantidad_boletos, descripcion, condicion, precio } = req.body;
     const n = parseInt(cantidad_boletos, 10);
     
-    if (!titulo || !descripcion || !urlPublica || !imagenNombreRifa || !condicion || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
+    if (!titulo || !descripcion || !urlPublica || !imagenNombreRifa || !condicion || !precio || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
 
     // crear rifa
     const { data: rifa, error: errR } = await supabase
       .from('rifas')
-      .insert({ titulo, cantidad_boletos: n, estado: 'activa', descripcion, url_imagen_rifa: urlPublica, nombre_imagen_rifa: imagenNombreRifa, condicion })
+      .insert({ titulo, cantidad_boletos: n, estado: 'activa', descripcion, url_imagen_rifa: urlPublica, nombre_imagen_rifa: imagenNombreRifa, condicion, precio })
       .select()
       .single();
 
@@ -126,10 +126,10 @@ router.get('/administrador/obtenerPorcentajeBoletos/:id', async (req, res) => {
 router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { titulo, cantidad_boletos, descripcion, condicion } = req.body;
+    const { titulo, cantidad_boletos, descripcion, condicion, precio } = req.body;
 
     const nuevoTotal = parseInt(cantidad_boletos, 10);
-    if (!titulo || !descripcion || !condicion || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
+    if (!titulo || !descripcion || !condicion || !precio || isNaN(nuevoTotal) || nuevoTotal < 1 || nuevoTotal > 1000) {
       return res.status(400).json({ error: 'Datos inválidos' });
     }
 
@@ -235,7 +235,7 @@ router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async 
     // -------------------------------------------------------
     // CASO 3: SI SOLO SE CAMBIA EL TITULO (SIN CAMBIAR CANTIDAD)
     // -------------------------------------------------------
-    const { error: errUpdate } = await supabase.from('rifas').update({ titulo, descripcion, url_imagen_rifa:nuevaUrl, nombre_imagen_rifa:nuevoNombreImagen, condicion }).eq('id_rifas', id);
+    const { error: errUpdate } = await supabase.from('rifas').update({ titulo, descripcion, url_imagen_rifa:nuevaUrl, nombre_imagen_rifa:nuevoNombreImagen, condicion, precio }).eq('id_rifas', id);
 
     if (errUpdate) throw errUpdate;
 
