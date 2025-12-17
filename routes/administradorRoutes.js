@@ -5,26 +5,28 @@ const express = require('express');
 const router = express.Router();
 //llamada a la conexion de la base de datos
 const supabase = require('../db/supabaseClient');
+const verificarToken = require('../utils/validarToken');
 
 /********************************Metodos protocolo http********************************/
 //lista administrador
-router.get('/log/administrador/lista', async (req, res) => {
-    try {
-        const idAdminLogueado = req.user.id_administrador;
+router.get('/log/administrador/lista',verificarToken, async (req, res) => {
+        try {
+            const idAdminLogueado = req.user.id_administrador;
 
-        const { data, error } = await supabase
-            .from('usuario_administrador')
-            .select('*')
-            .neq('id_administrador', 2)               // excluir admin master
-            .neq('id_administrador', idAdminLogueado); // excluir admin logueado
+            const { data, error } = await supabase
+                .from('usuario_administrador')
+                .select('*')
+                .neq('id_administrador', 2)                 // excluir master
+                .neq('id_administrador', idAdminLogueado);  // excluir logueado
 
-        if (error) throw error;
+            if (error) throw error;
 
-        res.json(data);
-    } catch (err) {
-        res.status(500).json({ error: err.message || err });
+            res.json(data);
+        } catch (err) {
+            res.status(500).json({ error: err.message || err });
+        }
     }
-});
+);
 
 //obtener administrador por id
 router.get('/log/administrador/:id', async (req, res) => {
