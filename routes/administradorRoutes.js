@@ -10,14 +10,18 @@ const supabase = require('../db/supabaseClient');
 //lista administrador
 router.get('/log/administrador/lista', async (req, res) => {
     try {
+        const idAdminLogueado = req.user.id_administrador;
+
         const { data, error } = await supabase
             .from('usuario_administrador')
             .select('*')
-            .neq('id_administrador', 2);   // equivalente a WHERE id_administrador != 2
+            .neq('id_administrador', 2)               // excluir admin master
+            .neq('id_administrador', idAdminLogueado); // excluir admin logueado
 
         if (error) throw error;
+
         res.json(data);
-    } catch (error) {
+    } catch (err) {
         res.status(500).json({ error: err.message || err });
     }
 });
