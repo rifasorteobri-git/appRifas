@@ -9,15 +9,22 @@ const verificarToken = require('../utils/validarToken');
 
 /********************************Metodos protocolo http********************************/
 //lista administrador
-router.get('/log/administrador/lista',verificarToken, async (req, res) => {
+router.get(
+    '/log/administrador/lista', verificarToken, async (req, res) => {
         try {
             const idAdminLogueado = req.user.id_administrador;
 
-            const { data, error } = await supabase
+            let query = supabase
                 .from('usuario_administrador')
                 .select('*')
-                .neq('id_administrador', 2)                 // excluir master
-                .neq('id_administrador', idAdminLogueado);  // excluir logueado
+                .neq('id_administrador', 2); // siempre excluir master
+
+            // SOLO si NO es el master, excluir también al logueado
+            if (idAdminLogueado !== 2) {
+                query = query.neq('id_administrador', idAdminLogueado);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -27,6 +34,7 @@ router.get('/log/administrador/lista',verificarToken, async (req, res) => {
         }
     }
 );
+
 
 //obtener administrador por id
 router.get('/log/administrador/:id', async (req, res) => {
