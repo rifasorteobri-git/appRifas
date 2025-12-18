@@ -418,8 +418,81 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
   }
 });
 
-//Sorteo en vivo --> este endpoint se usará para realizar los sorteos en vivo
+//Sorteo en vivo --> este endpoint se usará para realizar los sorteos en vivo. Se crea una nueva tabla para manejar los sorteos en vivo
+//Tabla sorteos_en_vivo
+router.post('/administrador/rifas/sorteo-vivo/:id', async (req, res) => {
+  try {
+    const rifaId = req.params.id;
 
+    // boletos vendidos
+    const { data: boletos } = await supabase
+      .from('boletos')
+      .select('numero_boleto, nombre_cliente, apellido_cliente, telefono_cliente')
+      .eq('rifa_id', rifaId)
+      .eq('estado', 'vendido');
+
+    if (!boletos || boletos.length < 3) {
+      return res.status(400).json({ error: 'No hay suficientes boletos' });
+    }
+
+    // mezclar
+    for (let i = boletos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [boletos[i], boletos[j]] = [boletos[j], boletos[i]];
+    }
+
+    // limpiar sorteos anteriores
+    await supabase
+      .from('sorteos_en_vivo')
+      .delete()
+      .eq('rifa_id', rifaId);
+
+    // insertar perdedores
+    for (let i = 0; i < 2; i++) {
+      await supabase.from('sorteos_en_vivo').insert({
+        rifa_id: rifaId,
+        tipo: 'perdedor',
+        numero_boleto: boletos[i].numero_boleto,
+        orden: i + 1
+      });
+
+      await delay(2000);
+    }
+
+    // ganador
+    const ganador = boletos[2];
+
+    await supabase.from('sorteos_en_vivo').insert({
+      rifa_id: rifaId,
+      tipo: 'ganador',
+      numero_boleto: ganador.numero_boleto,
+      orden: 3
+    });
+
+    // persistir ganador
+    await supabase.from('ganadores').insert({
+      rifa_id: rifaId,
+      numero_ganador: ganador.numero_boleto,
+      nombre_ganador: ganador.nombre_cliente,
+      apellido_ganador: ganador.apellido_cliente,
+      telefono_ganador: ganador.telefono_cliente
+    });
+
+    await supabase
+      .from('rifas')
+      .update({ estado: 'sorteada', numero_ganador: ganador.numero_boleto })
+      .eq('id_rifas', rifaId);
+
+    res.json({ mensaje: 'Sorteo en vivo finalizado' });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
 
 //Revertir sorteo
 router.post('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
@@ -477,6 +550,58 @@ router.post('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
       .eq('rifa_id', id);
 
     res.json({ mensaje: 'Sorteo revertido completamente' });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message || error });
+  }
+});
+
+//Revertir 1 ganador
+router.post('/administrador/rifas/revertir-ganador', async (req, res) => {
+  try {
+    const { rifa_id, numero_boleto } = req.body;
+
+    if (!rifa_id || !numero_boleto) {
+      return res.status(400).json({ error: 'Datos incompletos' });
+    }
+
+    // 1. Verificar que existe el ganador
+    const { data: ganador, error: errGan } = await supabase
+      .from('ganadores')
+      .select('*')
+      .eq('rifa_id', rifa_id)
+      .eq('numero_ganador', numero_boleto)
+      .single();
+
+    if (errGan || !ganador) {
+      return res.status(404).json({ error: 'Ganador no encontrado' });
+    }
+
+    // 2. Revertir boleto
+    const { error: errBol } = await supabase
+      .from('boletos')
+      .update({
+        ganador: false,
+        estado: 'vendido'
+      })
+      .eq('rifa_id', rifa_id)
+      .eq('numero_boleto', numero_boleto);
+
+    if (errBol) throw errBol;
+
+    // 3. Eliminar ganador
+    const { error: errDel } = await supabase
+      .from('ganadores')
+      .delete()
+      .eq('rifa_id', rifa_id)
+      .eq('numero_ganador', numero_boleto);
+
+    if (errDel) throw errDel;
+
+    res.json({
+      mensaje: 'Ganador revertido correctamente',
+      numero_boleto
+    });
 
   } catch (error) {
     res.status(500).json({ error: error.message || error });
