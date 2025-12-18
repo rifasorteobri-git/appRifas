@@ -423,13 +423,52 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
 router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
   try {
     const rifaId = parseInt(req.params.rifaId, 10);
-    const { id_productos } = req.body; // premio a sortear
+    const { id_productos } = req.body;
 
     if (!rifaId || !id_productos) {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    /* OBTENER EL PRODUCTO (PREMIO) */
+    /* =====================================
+       OBTENER LA RIFA Y VALIDAR PREMIOS
+    ===================================== */
+    const { data: rifa, error: errRifa } = await supabase
+      .from('rifas')
+      .select('cantidad_premios, estado')
+      .eq('id_rifas', rifaId)
+      .single();
+
+    if (errRifa || !rifa) {
+      return res.status(404).json({ error: 'Rifa no encontrada' });
+    }
+
+    if (rifa.estado === 'sorteada') {
+      return res.status(400).json({
+        error: 'La rifa ya fue sorteada'
+      });
+    }
+
+    /* =====================================
+       CUÁNTOS PREMIOS YA SE SORTEARON
+    ===================================== */
+    const { data: ganadoresPrevios, error: errPrevios } = await supabase
+      .from('ganadores')
+      .select('orden')
+      .eq('rifa_id', rifaId);
+
+    if (errPrevios) throw errPrevios;
+
+    if (ganadoresPrevios.length >= rifa.cantidad_premios) {
+      return res.status(400).json({
+        error: 'Ya se han sorteado todos los premios de esta rifa'
+      });
+    }
+
+    const ordenPremio = ganadoresPrevios.length + 1;
+
+    /* =====================================
+       OBTENER EL PRODUCTO (PREMIO)
+    ===================================== */
     const { data: producto, error: errProducto } = await supabase
       .from('productos')
       .select('nombre_producto')
@@ -440,15 +479,9 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    /* CUÁNTOS PREMIOS YA SE SORTEARON */
-    const { data: ganadoresPrevios } = await supabase
-      .from('ganadores')
-      .select('orden')
-      .eq('rifa_id', rifaId);
-
-    const ordenPremio = ganadoresPrevios.length + 1;
-
-    /* OBTENER BOLETOS PARTICIPANTES - NO ganadores previos */
+    /* =====================================
+       OBTENER BOLETOS PARTICIPANTES
+    ===================================== */
     const { data: boletos, error: errBoletos } = await supabase
       .from('boletos')
       .select(`
@@ -467,21 +500,20 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
       });
     }
 
-    /* MEZCLAR BOLETOS (Fisher-Yates) */
+    /* =====================================
+       MEZCLAR BOLETOS
+    ===================================== */
     for (let i = boletos.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [boletos[i], boletos[j]] = [boletos[j], boletos[i]];
     }
 
-    /* ======================================================
-      SELECCIÓN
-       - 2 perdedores
-       - 1 ganador
-    ====================================================== */
     const perdedores = boletos.slice(0, 2);
     const ganador = boletos[2];
 
-    /* GUARDAR GANADOR */
+    /* =====================================
+       GUARDAR GANADOR
+    ===================================== */
     const { error: errGanador } = await supabase
       .from('ganadores')
       .insert({
@@ -497,7 +529,9 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
 
     if (errGanador) throw errGanador;
 
-    /* ACTUALIZAR BOLETO GANADOR */
+    /* =====================================
+       ACTUALIZAR BOLETO GANADOR
+    ===================================== */
     const { error: errUpdateBoleto } = await supabase
       .from('boletos')
       .update({
@@ -508,7 +542,21 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
 
     if (errUpdateBoleto) throw errUpdateBoleto;
 
-    /* RESPUESTA */
+    /* =====================================
+       ¿ES EL ÚLTIMO PREMIO? → FINALIZAR RIFA
+    ===================================== */
+    if (ordenPremio === rifa.cantidad_premios) {
+      const { error: errFinalizar } = await supabase
+        .from('rifas')
+        .update({ estado: 'sorteada' })
+        .eq('id_rifas', rifaId);
+
+      if (errFinalizar) throw errFinalizar;
+    }
+
+    /* =====================================
+       RESPUESTA
+    ===================================== */
     res.json({
       mensaje: 'Sorteo realizado correctamente',
       premio: {
@@ -531,6 +579,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     });
   }
 });
+
 
 
 //Revertir sorteo
