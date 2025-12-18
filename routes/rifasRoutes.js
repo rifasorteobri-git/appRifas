@@ -319,7 +319,7 @@ router.get('/administrador/rifas/boletos/:id', async (req, res) => {
 });
 
 // Endpoint FINALIZAR SORTEO (backend elige ganador de forma segura)
-router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
+/*router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'id rifa inválido' });
@@ -381,7 +381,107 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message || err });
   }
+});*/
+
+router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const PERDEDORES_POR_PREMIO = 2;
+
+    // Obtener rifa (para saber cuántos premios tiene)
+    const { data: rifa, error: errRifa } = await supabase
+      .from('rifas')
+      .select('cantidad_premios, estado')
+      .eq('id_rifas', id)
+      .single();
+
+    if (errRifa) throw errRifa;
+    if (rifa.estado === 'sorteada') {
+      return res.status(400).json({ error: 'La rifa ya fue sorteada' });
+    }
+
+    const cantidadPremios = rifa.cantidad_premios || 1;
+
+    // Obtener boletos vendidos
+    const { data: boletos, error } = await supabase
+      .from('boletos')
+      .select('numero_boleto, nombre_cliente, apellido_cliente, telefono_cliente')
+      .eq('rifa_id', id)
+      .eq('estado', 'vendido');
+
+    if (error) throw error;
+    if (!boletos || boletos.length === 0)
+      return res.status(400).json({ error: 'No hay boletos vendidos' });
+
+    // Validación mínima de boletos
+    const minBoletos = cantidadPremios * (PERDEDORES_POR_PREMIO + 1);
+    if (boletos.length < minBoletos) {
+      return res.status(400).json({
+        error: `Se requieren al menos ${minBoletos} boletos para ${cantidadPremios} premio(s)`
+      });
+    }
+
+    // Mezclar boletos (Fisher-Yates)
+    for (let i = boletos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [boletos[i], boletos[j]] = [boletos[j], boletos[i]];
+    }
+
+    // Seleccionar ganadores (2 pierden, 1 gana)
+    let index = 0;
+    const ganadores = [];
+
+    for (let i = 0; i < cantidadPremios; i++) {
+      index += PERDEDORES_POR_PREMIO; // saltamos perdedores
+
+      const ganador = boletos[index];
+      if (!ganador) break;
+
+      ganadores.push({
+        rifa_id: id,
+        orden: i + 1,
+        numero_ganador: ganador.numero_boleto,
+        nombre_ganador: ganador.nombre_cliente,
+        apellido_ganador: ganador.apellido_cliente,
+        telefono_ganador: ganador.telefono_cliente
+      });
+
+      index++; // seguimos
+    }
+
+    // Guardar ganadores
+    const { error: errInsert } = await supabase
+      .from('ganadores')
+      .insert(ganadores);
+
+    if (errInsert) throw errInsert;
+
+    // Marcar boletos ganadores
+    for (const g of ganadores) {
+      await supabase
+        .from('boletos')
+        .update({ ganador: true, estado: 'ganador' })
+        .eq('rifa_id', id)
+        .eq('numero_boleto', g.numero_ganador);
+    }
+
+    // Actualizar rifa
+    await supabase
+      .from('rifas')
+      .update({ estado: 'sorteada' })
+      .eq('id_rifas', id);
+
+    res.json({
+      mensaje: 'Sorteo realizado correctamente',
+      cantidad_premios: cantidadPremios,
+      ganadores
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
 
 //Revertir sorteo
 router.put('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
