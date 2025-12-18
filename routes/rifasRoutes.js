@@ -486,7 +486,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
       .from('ganadores')
       .insert({
         rifa_id: rifaId,
-        boleto_id: ganador.boleto_id,
+        boleto_id: ganador.id_boletos,
         numero_ganador: ganador.numero_boleto,
         nombre_ganador: ganador.nombre_cliente,
         apellido_ganador: ganador.apellido_cliente,
