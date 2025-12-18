@@ -504,7 +504,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
         ganador: true,
         estado: 'ganador'
       })
-      .eq('id_boletos', ganador.boleto_id);
+      .eq('id_boletos', ganador.id_boletos);
 
     if (errUpdateBoleto) throw errUpdateBoleto;
 
