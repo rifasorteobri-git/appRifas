@@ -318,71 +318,7 @@ router.get('/administrador/rifas/boletos/:id', async (req, res) => {
   }
 });
 
-// Endpoint FINALIZAR SORTEO (backend elige ganador de forma segura)
-/*router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (!id) return res.status(400).json({ error: 'id rifa inválido' });
-
-    // 1) Obtener todos los boletos (se puede filtrar para solo vendidos si lo deseas)
-    const { data: all, error: errAll } = await supabase
-      .from('boletos')
-      .select('numero_boleto, nombre_cliente, apellido_cliente, telefono_cliente')
-      .eq('rifa_id', id);
-
-    if (errAll) throw errAll;
-    if (!all || all.length === 0) return res.status(400).json({ error: 'No hay boletos' });
-
-    // 2) mezclar (Fisher-Yates)
-    for (let i = all.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [all[i], all[j]] = [all[j], all[i]];
-    }
-    const ganador = all[0];
-
-    // 3) persistir ganador y actualizar rifas y boletos (en transacciones separadas)
-    const { error: errG } = await supabase.from('ganadores').insert([{
-      rifa_id: id,
-      numero_ganador: ganador.numero_boleto,
-      nombre_ganador: ganador.nombre_cliente,
-      apellido_ganador: ganador.apellido_cliente,
-      telefono_ganador: ganador.telefono_cliente
-    }]);
-    if (errG) throw errG;
-
-    // actualizar boleto ganador (set ganador true y estado)
-    const { error: errUpdB } = await supabase
-      .from('boletos')
-      .update({ ganador: true, estado: 'ganador' })
-      .eq('rifa_id', id)
-      .eq('numero_boleto', ganador.numero_boleto);
-    if (errUpdB) throw errUpdB;
-
-    // actualizar rifas: numero_ganador y estado
-    const { data: updatedRifa, error: errUpdR } = await supabase
-      .from('rifas')
-      .update({ numero_ganador: ganador.numero_boleto, estado: 'sorteada' })
-      .eq('id_rifas', id)
-      .select()
-      .single();
-    if (errUpdR) throw errUpdR;
-
-    // Responder al admin
-    res.json({
-      mensaje: 'Sorteo finalizado',
-      ganador: {
-        numero: ganador.numero_boleto,
-        nombre: ganador.nombre_ganador,
-        apellido: ganador.apellido_ganador,
-        telefono: ganador.telefono_ganador
-      },
-      rifa: updatedRifa
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message || err });
-  }
-});*/
-
+// Endpoint FINALIZAR SORTEO (backend elige ganador de forma segura) uso para rifas rapidas u otros casos
 router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
@@ -482,53 +418,49 @@ router.post('/administrador/rifas/sorteo/:id', async (req, res) => {
   }
 });
 
+//Sorteo en vivo --> este endpoint se usará para realizar los sorteos en vivo
+
 
 //Revertir sorteo
-router.put('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
-  const { id } = req.params;
+router.post('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
   try {
+    const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'ID de rifa inválido' });
-    // Obtener la rifa
-    const { data: rifa, error: errRifa } = await supabase
-      .from('rifas')
-      .select('*')
-      .eq('id_rifas', id)
-      .single();
 
-    if (errRifa) throw errRifa;
+    // 1. Obtener ganadores de la rifa
+    const { data: ganadores, error: errGan } = await supabase
+      .from('ganadores')
+      .select('numero_ganador')
+      .eq('rifa_id', id);
 
-    if (!rifa) return res.status(404).json({ error: 'Rifa no encontrada' });
+    if (errGan) throw errGan;
 
-    if (!rifa.numero_ganador) {
-      return res.status(400).json({
-        error: "Esta rifa no tiene ganador registrado o no ha sido sorteada"
-      });
+    // 2. Revertir boletos ganadores
+    if (ganadores.length > 0) {
+      const numeros = ganadores.map(g => g.numero_ganador);
+
+      const { error: errBol } = await supabase
+        .from('boletos')
+        .update({
+          ganador: false,
+          estado: 'vendido'
+        })
+        .eq('rifa_id', id)
+        .in('numero_boleto', numeros);
+
+      if (errBol) throw errBol;
     }
 
-    const numeroGanador = rifa.numero_ganador;
-
-    // Eliminar ganador de la tabla ganadores
-    const { error: errDelWinner } = await supabase
+    // 3. Eliminar ganadores
+    const { error: errDel } = await supabase
       .from('ganadores')
       .delete()
       .eq('rifa_id', id);
 
-    if (errDelWinner) throw errDelWinner;
+    if (errDel) throw errDel;
 
-    // Reiniciar el boleto ganador
-    const { error: errResetBoleto } = await supabase
-      .from('boletos')
-      .update({
-        ganador: false,
-        estado: 'vendido' // o 'vendido' si así manejas tus estados
-      })
-      .eq('rifa_id', id)
-      .eq('numero_boleto', numeroGanador);
-
-    if (errResetBoleto) throw errResetBoleto;
-
-    // Actualizar rifa: volver a activa y borrar número ganador
-    const { error: errResetRifa } = await supabase
+    // 4. Revertir rifa
+    const { error: errRifa } = await supabase
       .from('rifas')
       .update({
         estado: 'activa',
@@ -536,20 +468,21 @@ router.put('/administrador/rifas/revertir-sorteo/:id', async (req, res) => {
       })
       .eq('id_rifas', id);
 
-    if (errResetRifa) throw errResetRifa;
+    if (errRifa) throw errRifa;
 
-    return res.json({
-      mensaje: 'Sorteo revertido correctamente',
-      detalles: {
-        rifa_id: id,
-        boleto_revertido: numeroGanador
-      }
-    });
+    // 5. (Opcional) limpiar sorteos en vivo
+    await supabase
+      .from('sorteos_en_vivo')
+      .delete()
+      .eq('rifa_id', id);
 
-  } catch (err) {
-    res.status(500).json({ error: err.message || err });
+    res.json({ mensaje: 'Sorteo revertido completamente' });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message || error });
   }
 });
+
 
 module.exports = router;
 
