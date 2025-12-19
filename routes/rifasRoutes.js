@@ -708,7 +708,7 @@ router.get('/administrador/ganadores/:rifa_id', async (req, res) => {
     .from('ganadores')
     .select('*')
     .eq('rifa_id', rifa_id)
-    .single();
+    .order('orden', { ascending: true });
 
     if (error) throw error;
     res.json(data);
