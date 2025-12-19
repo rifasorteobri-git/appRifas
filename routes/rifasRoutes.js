@@ -700,5 +700,23 @@ router.post('/administrador/rifas/revertir-ganador/:ganadorId', async (req, res)
   }
 });
 
+//Listar ganadores por rifa
+router.get('/administrador/ganadores/:rifa_id', async (req, res) => {
+  const rifa_id = req.params.rifa_id;
+  try {
+    const { data, error } = await supabase
+    .from('ganadores')
+    .select('*')
+    .eq('rifa_id', rifa_id)
+    .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener ganadores' });
+  }
+})
+
 module.exports = router;
 
