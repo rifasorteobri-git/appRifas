@@ -638,7 +638,7 @@ router.post('/administrador/rifas/revertir-sorteo/:rifaId', async (req, res) => 
 
     /* Eliminar registros */
     await supabase.from('ganadores').delete().eq('rifa_id', rifaId);
-    await supabase.from('sorteo_en_vivo').delete().eq('rifa_id', rifaId);
+    await supabase.from('sorteos_en_vivo').delete().eq('rifa_id', rifaId);
 
     /* Restaurar rifa */
     await supabase
@@ -681,7 +681,7 @@ router.post('/administrador/rifas/revertir-ganador/:ganadorId', async (req, res)
 
     /* Eliminar eventos del sorteo */
     await supabase
-      .from('sorteo_en_vivo')
+      .from('sorteos_en_vivo')
       .delete()
       .eq('rifa_id', ganador.rifa_id)
       .eq('orden', ganador.orden);
