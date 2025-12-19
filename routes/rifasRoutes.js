@@ -101,7 +101,7 @@ router.get('/administrador/listarRifas', async (req, res) => {
 // Listar rifas activas modo publico
 router.get('/publico/rifas/activas', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('rifas').select('*').eq('condicion', "Visible").order('id_rifas', { ascending: false });
+    const { data, error } = await supabase.from('rifas').select('*').eq('estado', "activa").order('id_rifas', { ascending: false });
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -112,7 +112,7 @@ router.get('/publico/rifas/activas', async (req, res) => {
 // Listar rifas finalizadas modo publico
 router.get('/publico/rifas/inactivas', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('rifas').select('*').eq('condicion', "No visible").order('id_rifas', { ascending: false });
+    const { data, error } = await supabase.from('rifas').select('*').eq('estado', "sorteada").order('id_rifas', { ascending: false });
     if (error) throw error;
     res.json(data);
   } catch (err) {
