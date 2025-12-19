@@ -512,7 +512,41 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     const ganador = boletos[2];
 
     /* =====================================
-       GUARDAR GANADOR
+       GUARDAR EN SORTEOS EN VIVO
+    ===================================== */
+    const eventosSorteo = [
+      ...perdedores.map(p => ({
+        rifa_id: rifaId,
+        orden: ordenPremio,
+        boleto_id: p.id_boletos,
+        numero_boleto: p.numero_boleto,
+        nombre_cliente: p.nombre_cliente,
+        apellido_cliente: p.apellido_cliente,
+        telefono_cliente: p.telefono_cliente,
+        nombre_premio: producto.nombre_producto,
+        estado: 'perdedor'
+      })),
+      {
+        rifa_id: rifaId,
+        orden: ordenPremio,
+        boleto_id: ganador.id_boletos,
+        numero_boleto: ganador.numero_boleto,
+        nombre_cliente: ganador.nombre_cliente,
+        apellido_cliente: ganador.apellido_cliente,
+        telefono_cliente: ganador.telefono_cliente,
+        nombre_premio: producto.nombre_producto,
+        estado: 'ganador'
+      }
+    ];
+
+    const { error: errSorteoEnVivo } = await supabase
+      .from('sorteos_en_vivo')
+      .insert(eventosSorteo);
+
+    if (errSorteoEnVivo) throw errSorteoEnVivo;
+
+    /* =====================================
+       GUARDAR GANADOR FINAL
     ===================================== */
     const { error: errGanador } = await supabase
       .from('ganadores')
@@ -543,7 +577,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     if (errUpdateBoleto) throw errUpdateBoleto;
 
     /* =====================================
-       ¿ES EL ÚLTIMO PREMIO? → FINALIZAR RIFA
+       FINALIZAR RIFA SI ES EL ÚLTIMO PREMIO
     ===================================== */
     if (ordenPremio === rifa.cantidad_premios) {
       const { error: errFinalizar } = await supabase
@@ -580,12 +614,9 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
   }
 });
 
-
-
 //Revertir sorteo
 router.post('/administrador/rifas/revertir-sorteo/:rifaId', async (req, res) => {
   const rifaId = req.params.rifaId;
-
   try {
     /* Obtener ganadores */
     const { data: ganadores, error: errG } = await supabase
