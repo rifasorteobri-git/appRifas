@@ -494,7 +494,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     ===================================== */
     const { data: producto, error: errProducto } = await supabase
       .from('productos')
-      .select('nombre_producto', 'url_imagen_producto')
+      .select('nombre_producto, url_imagen_producto')
       .eq('id_productos', id_productos)
       .single();
 
@@ -547,6 +547,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
         apellido_cliente: p.apellido_cliente,
         telefono_cliente: p.telefono_cliente,
         nombre_premio: producto.nombre_producto,
+        imagen_premio: producto.url_imagen_producto,
         estado: 'perdedor'
       })),
       {
@@ -558,6 +559,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
         apellido_cliente: ganador.apellido_cliente,
         telefono_cliente: ganador.telefono_cliente,
         nombre_premio: producto.nombre_producto,
+        imagen_premio: producto.url_imagen_producto,
         estado: 'ganador'
       }
     ];
@@ -723,6 +725,54 @@ router.post('/administrador/rifas/revertir-ganador/:ganadorId', async (req, res)
     res.status(500).json({ error: 'Error al revertir ganador' });
   }
 });
+
+//Eliminar registros de la tabla sorteos_en_vivo
+router.delete('/administrador/rifas/sorteo-en-vivo/limpiar/:rifaId', async (req, res) => {
+  try {
+    const rifaId = parseInt(req.params.rifaId, 10);
+
+    if (!rifaId) {
+      return res.status(400).json({
+        error: 'ID de rifa inválido'
+      });
+    }
+
+    // Verificar que la rifa exista
+    const { data: rifa, error: errRifa } = await supabase
+      .from('rifas')
+      .select('id_rifas')
+      .eq('id_rifas', rifaId)
+      .single();
+
+    if (errRifa || !rifa) {
+      return res.status(404).json({
+        error: 'Rifa no encontrada'
+      });
+    }
+
+    // Eliminar todos los registros del sorteo en vivo
+    const { error: errDelete } = await supabase
+      .from('sorteos_en_vivo')
+      .delete()
+      .eq('rifa_id', rifaId);
+
+    if (errDelete) {
+      throw errDelete;
+    }
+
+    res.json({
+      mensaje: 'Registros de sorteo en vivo eliminados correctamente',
+      rifaId: rifaId
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: error.message || 'Error al limpiar sorteo en vivo'
+    });
+  }
+});
+
 
 //Listar ganadores por rifa
 router.get('/administrador/ganadores/:rifa_id', async (req, res) => {
