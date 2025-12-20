@@ -276,7 +276,7 @@ router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async 
 router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    // Obtener nombre de la imagen
+    // Eliminar la imagen de la rifa
     const { data: nombreImagenRifa, error: errRifa } = await supabase.from('rifas').select('nombre_imagen_rifa').eq('id_rifas', id).single();
     
     if (errRifa || !nombreImagenRifa) {
@@ -295,8 +295,32 @@ router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
       return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
     }
 
+    //Eliminar la imagen de los ganadores de esa rifa
+    const { data: nombreImagenGanadores, error: errGanadores } = await supabase
+      .from('imagenes_ganadores')
+      .select('nombre_imagen_ganadores')
+      .eq('id_imagenes', id)
+
+    if (errGanadores || !nombreImagenGanadores) {
+      return res.status(400).json({ error: 'Imagenes no existen' });
+    }
+
+    const nombreGanadores = nombreImagenGanadores.nombre_imagen_ganadores;
+    // Eliminar la imagen desde Supabase Storage
+    const { error: deleteErr } = await supabase
+      .storage
+      .from('imagen-ganadores')
+      .remove([nombreGanadores]);
+    
+    if (deleteErr) {
+      console.error('Error al eliminar la imagen de Supabase:', deleteError);
+      return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
+    }
+
     // Primero eliminar los boletos asociados (si tu DB tiene FK con ON DELETE RESTRICT)
     await supabase.from('boletos').delete().eq('rifa_id', id);
+    // Luego las imagenes de los ganadores asociados
+    await supabase.from('imagenes_ganadores').delete().eq('rifa_id', id);
     // Luego eliminar la rifa
     const { error } = await supabase.from('rifas').delete().eq('id_rifas', id);
     if (error) throw error;
@@ -715,6 +739,118 @@ router.get('/administrador/ganadores/:rifa_id', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener ganadores' });
+  }
+})
+
+//Subir imagenes de ganadores
+router.post('/administrador/ganadores/subirImagenes/:rifa_id', upload.single('imagenGanadores'), async (req, res) => {
+  const rifa_id = req.params.rifa_id;
+  try {
+    if (!req.file) {
+      console.log('No se ha proporcionado ninguna imagen');
+      return res.status(400).json({ message: 'No se ha proporcionado ninguna imagen.' });
+    }
+
+    const imagenNombreGanadores = req.file.originalname;
+
+    const { data: existente, error: existingError} = await supabase
+      .storage
+      .from('imagen-ganadores')
+      .list('', { search: imagenNombreGanadores });
+    
+    if (existingError) {
+      console.error('Error al verificar existencia de imagen:', existingError.message);
+      return res.status(500).json({ message: 'Error al verificar la existencia de la imagen en Supabase.' });
+    }
+
+    if (existente.length > 0) {
+      console.log('La imagen ya existe en Supabase');
+      return res.status(400).json({ message: 'Esta imagen ya está registrada en la base de datos. Por favor, cargue una imagen con otro nombre.' });
+    }
+
+    const buffer = await sharp(req.file.buffer).toBuffer();
+    const { error: uploadError } = await supabase
+      .storage
+      .from('imagen-ganadores')
+      .upload(imagenNombreGanadores, buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error('Error al subir la imagen a Supabase:', uploadError.message);
+      return res.status(500).json({ message: 'Error al subir la imagen a Supabase.' });
+    }
+
+    const urlPublica = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-ganadores/${imagenNombreGanadores}`;
+    //Insertamos la imagen/es
+    const { error: errR } = await supabase
+      .from('imagenes_ganadores')
+      .insert({rifa_id: rifa_id, url_imagen_ganadores: urlPublica, nombre_imagen_ganadores: imagenNombreGanadores})
+      .select()
+      .single();
+    
+    if (errR) throw errR;
+
+    //Se crea la imagen
+    res.json({ ok: true, message: 'Imágenes subidas correctamente' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al subir imagen' });
+  }
+})
+
+//Obtener imagenes ganadores
+router.get('/administrador/ganadores/obtenerImagenes/:rifa_id', async (req, res) => {
+  const rifa_id = req.params.rifa_id;
+  try {
+    const { data, error } = await supabase
+      .from('imagenes_ganadores')
+      .select('*')
+      .eq('rifa_id', rifa_id)
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener imagen/es' });
+  }
+})
+
+//Eliminar una imagen
+router.delete('/administrador/ganadores/eliminarImagen/:id', async (req, res) => {
+  try {
+    const {id} = req.params;
+    //Obtener nombre de la imagen
+    const { data: nombreImagenGanadores, error: errGanadores } = await supabase
+      .from('imagenes_ganadores')
+      .select('nombre_imagen_ganadores')
+      .eq('id_imagenes', id)
+      .single();
+
+    if (errGanadores || !nombreImagenGanadores) {
+      return res.status(400).json({ error: 'Imagen no existe' });
+    }
+
+    const nombreImagen = nombreImagenGanadores.nombre_imagen_ganadores;
+    // Eliminar la imagen desde Supabase Storage
+    const { error: deleteError } = await supabase
+      .storage
+      .from('imagen-ganadores')
+      .remove([nombreImagen]);
+    
+    if (deleteError) {
+      console.error('Error al eliminar la imagen de Supabase:', deleteError);
+      return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
+    }
+
+    //Eliminar la imagen
+    const {error} = await supabase.from('imagenes_ganadores').delete().eq('id_imagenes', id)
+    if (error) throw error;
+    res.json({ message: 'Imagen eliminada correctamente' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar imagen/es' });
   }
 })
 
