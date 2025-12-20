@@ -299,7 +299,7 @@ router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
     const { data: nombreImagenGanadores, error: errGanadores } = await supabase
       .from('imagenes_ganadores')
       .select('nombre_imagen_ganadores')
-      .eq('id_imagenes', id)
+      .eq('rifa_id', id)
 
     if (errGanadores || !nombreImagenGanadores) {
       return res.status(400).json({ error: 'Imagenes no existen' });
