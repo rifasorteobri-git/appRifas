@@ -742,62 +742,90 @@ router.get('/administrador/ganadores/:rifa_id', async (req, res) => {
 })
 
 //Subir imagenes de ganadores
-router.post('/administrador/ganadores/subirImagenes/:rifa_id', upload.single('imagenGanadores'), async (req, res) => {
+router.post('/administrador/ganadores/subirImagenes/:rifa_id', upload.array('imagenGanadores', 10), async (req, res) => {
   const rifa_id = req.params.rifa_id;
   try {
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       console.log('No se ha proporcionado ninguna imagen');
       return res.status(400).json({ message: 'No se ha proporcionado ninguna imagen.' });
     }
 
-    const imagenNombreGanadores = req.file.originalname;
+    const resultados = [];
 
-    const { data: existente, error: existingError} = await supabase
-      .storage
-      .from('imagen-ganadores')
-      .list('', { search: imagenNombreGanadores });
-    
-    if (existingError) {
-      console.error('Error al verificar existencia de imagen:', existingError.message);
-      return res.status(500).json({ message: 'Error al verificar la existencia de la imagen en Supabase.' });
-    }
+    for (const file of req.files) {
+      const imagenNombreGanadores = file.originalname;
+      /* Verificar si ya existe en Supabase Storage */
+      const { data: existente, error: existingError } = await supabase
+        .storage
+        .from('imagen-ganadores')
+        .list('', { search: imagenNombreGanadores });
 
-    if (existente.length > 0) {
-      console.log('La imagen ya existe en Supabase');
-      return res.status(400).json({ message: 'Esta imagen ya está registrada en la base de datos. Por favor, cargue una imagen con otro nombre.' });
-    }
+      if (existingError) {
+        console.error('Error al verificar existencia:', existingError.message);
+        continue;
+      }
 
-    const buffer = await sharp(req.file.buffer).toBuffer();
-    const { error: uploadError } = await supabase
-      .storage
-      .from('imagen-ganadores')
-      .upload(imagenNombreGanadores, buffer, {
-        contentType: req.file.mimetype,
-        upsert: false
+      if (existente.length > 0) {
+        resultados.push({
+          nombre: imagenNombreGanadores,
+          estado: 'duplicada'
+        });
+        continue;
+      }
+
+      /* Procesar imagen */
+      const buffer = await sharp(file.buffer).toBuffer();
+
+      /* Subir a Supabase Storage */
+      const { error: uploadError } = await supabase
+        .storage
+        .from('imagen-ganadores')
+        .upload(imagenNombreGanadores, buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Error al subir imagen:', uploadError.message);
+        continue;
+      }
+
+      /* URL pública */
+      const urlPublica = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-ganadores/${imagenNombreGanadores}`;
+
+      /* Insertar en BD */
+      const { error: errR } = await supabase
+        .from('imagenes_ganadores')
+        .insert({
+          rifa_id: rifa_id,
+          url_imagen_ganadores: urlPublica,
+          nombre_imagen_ganadores: imagenNombreGanadores
+        });
+
+      if (errR) {
+        console.error('Error al insertar en BD:', errR.message);
+        continue;
+      }
+
+      resultados.push({
+        nombre: imagenNombreGanadores,
+        estado: 'subida'
       });
-    
-    if (uploadError) {
-      console.error('Error al subir la imagen a Supabase:', uploadError.message);
-      return res.status(500).json({ message: 'Error al subir la imagen a Supabase.' });
     }
 
-    const urlPublica = `${process.env.SUPABASE_URL}/storage/v1/object/public/imagen-ganadores/${imagenNombreGanadores}`;
-    //Insertamos la imagen/es
-    const { error: errR } = await supabase
-      .from('imagenes_ganadores')
-      .insert({rifa_id: rifa_id, url_imagen_ganadores: urlPublica, nombre_imagen_ganadores: imagenNombreGanadores})
-      .select()
-      .single();
-    
-    if (errR) throw errR;
+    /* Respuesta final */
+    res.json({
+      ok: true,
+      message: 'Proceso de subida finalizado',
+      resultados
+    });
 
-    //Se crea la imagen
-    res.json({ ok: true, message: 'Imágenes subidas correctamente' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error al subir imagen' });
+    res.status(500).json({ error: 'Error al subir imágenes' });
   }
-})
+});
+
 
 //Obtener imagenes ganadores
 router.get('/administrador/ganadores/obtenerImagenes/:rifa_id', async (req, res) => {
