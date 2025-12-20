@@ -276,59 +276,58 @@ router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async 
 router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    // Eliminar la imagen de la rifa
-    const { data: nombreImagenRifa, error: errRifa } = await supabase.from('rifas').select('nombre_imagen_rifa').eq('id_rifas', id).single();
-    
-    if (errRifa || !nombreImagenRifa) {
-      return res.status(400).json({ error: 'Imagen no existe' });
+    /* Imagen principal rifa */
+    const { data: rifa, error: errRifa } = await supabase
+      .from('rifas')
+      .select('nombre_imagen_rifa')
+      .eq('id_rifas', id)
+      .single();
+
+    if (rifa?.nombre_imagen_rifa) {
+      const { error } = await supabase.storage
+        .from('imagen-rifas')
+        .remove([rifa.nombre_imagen_rifa]);
+
+      if (error) {
+        console.error('Error eliminando imagen rifa:', error);
+      }
     }
 
-    const nombreImagen = nombreImagenRifa.nombre_imagen_rifa
-    // Eliminar la imagen desde Supabase Storage
-    const { error: deleteError } = await supabase
-      .storage
-      .from('imagen-rifas')
-      .remove([nombreImagen]);
-
-    if (deleteError) {
-      console.error('Error al eliminar la imagen de Supabase:', deleteError);
-      return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
-    }
-
-    //Eliminar la imagen de los ganadores de esa rifa
-    const { data: nombreImagenGanadores, error: errGanadores } = await supabase
+    /* Imágenes ganadores */
+    const { data: imagenesGanadores, error: errGanadores } = await supabase
       .from('imagenes_ganadores')
       .select('nombre_imagen_ganadores')
-      .eq('rifa_id', id)
+      .eq('rifa_id', id);
 
-    if (errGanadores || !nombreImagenGanadores) {
-      return res.status(400).json({ error: 'Imagenes no existen' });
+    if (errGanadores) throw errGanadores;
+
+    if (imagenesGanadores.length > 0) {
+      // Extraer solo los nombres
+      const nombresImagenes = imagenesGanadores.map(
+        img => img.nombre_imagen_ganadores
+      );
+
+      const { error } = await supabase.storage
+        .from('imagen-ganadores')
+        .remove(nombresImagenes);
+
+      if (error) {
+        console.error('Error eliminando imágenes ganadores:', error);
+      }
     }
 
-    const nombreGanadores = nombreImagenGanadores.nombre_imagen_ganadores;
-    // Eliminar la imagen desde Supabase Storage
-    const { error: deleteErr } = await supabase
-      .storage
-      .from('imagen-ganadores')
-      .remove([nombreGanadores]);
-    
-    if (deleteErr) {
-      console.error('Error al eliminar la imagen de Supabase:', deleteError);
-      return res.status(500).json({ error: 'No se pudo eliminar la imagen del almacenamiento' });
-    }
-
-    // Primero eliminar los boletos asociados (si tu DB tiene FK con ON DELETE RESTRICT)
+    /* Eliminaciones BD */
     await supabase.from('boletos').delete().eq('rifa_id', id);
-    // Luego las imagenes de los ganadores asociados
     await supabase.from('imagenes_ganadores').delete().eq('rifa_id', id);
-    // Luego eliminar la rifa
-    const { error } = await supabase.from('rifas').delete().eq('id_rifas', id);
-    if (error) throw error;
-    res.json({ message: 'Rifa eliminada correctamente' });
+    await supabase.from('rifas').delete().eq('id_rifas', id);
+
+    res.json({ message: 'Rifa e imágenes eliminadas correctamente' });
+
   } catch (err) {
     res.status(500).json({ error: err.message || err });
   }
 });
+
 
 // Obtener boletos de una rifa
 router.get('/administrador/rifas/boletos/:id', async (req, res) => {
