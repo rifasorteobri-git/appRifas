@@ -494,7 +494,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     ===================================== */
     const { data: producto, error: errProducto } = await supabase
       .from('productos')
-      .select('nombre_producto')
+      .select('nombre_producto', 'url_imagen_producto')
       .eq('id_productos', id_productos)
       .single();
 
@@ -581,6 +581,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
         apellido_ganador: ganador.apellido_cliente,
         telefono_ganador: ganador.telefono_cliente,
         nombre_premio: producto.nombre_producto,
+        imagen_premio: producto.url_imagen_producto,
         orden: ordenPremio
       });
 
