@@ -506,7 +506,29 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     /* =====================================
        FINALIZAR RIFA SI ES EL ÚLTIMO PREMIO
     ===================================== */
-    if (ordenPremio === rifa.cantidad_premios) {
+    /*if (ordenPremio === rifa.cantidad_premios) {
+      const { error: errFinalizar } = await supabase
+        .from('rifas')
+        .update({ estado: 'sorteada' })
+        .eq('id_rifas', rifaId);
+
+      if (errFinalizar) throw errFinalizar;
+    }*/
+
+    /* =====================================
+      ACTUALIZAR ESTADO DE LA RIFA
+    ===================================== */
+    if (ordenPremio < rifa.cantidad_premios) {
+      // Aún faltan premios → EN PROCESO
+      const { error: errProceso } = await supabase
+        .from('rifas')
+        .update({ estado: 'en_proceso' })
+        .eq('id_rifas', rifaId);
+
+      if (errProceso) throw errProceso;
+
+    } else {
+      // Ya se sortearon todos → SORTEADA
       const { error: errFinalizar } = await supabase
         .from('rifas')
         .update({ estado: 'sorteada' })
@@ -514,6 +536,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
 
       if (errFinalizar) throw errFinalizar;
     }
+
 
     /* =====================================
        RESPUESTA
