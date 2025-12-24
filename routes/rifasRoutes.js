@@ -105,7 +105,7 @@ router.get('/administrador/rifas/ganadores', async (req, res) => {
     const { data, error } = await supabase
       .from('rifas')
       .select('*')
-      .in('estado', ['activa', 'en_proceso'])
+      .in('estado', ['en_proceso', 'sorteada'])
       .order('id_rifas', { ascending: false });
 
     if (error) throw error;
