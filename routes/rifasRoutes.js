@@ -504,18 +504,6 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     if (errUpdateBoleto) throw errUpdateBoleto;
 
     /* =====================================
-       FINALIZAR RIFA SI ES EL ÚLTIMO PREMIO
-    ===================================== */
-    /*if (ordenPremio === rifa.cantidad_premios) {
-      const { error: errFinalizar } = await supabase
-        .from('rifas')
-        .update({ estado: 'sorteada' })
-        .eq('id_rifas', rifaId);
-
-      if (errFinalizar) throw errFinalizar;
-    }*/
-
-    /* =====================================
       ACTUALIZAR ESTADO DE LA RIFA
     ===================================== */
     if (ordenPremio < rifa.cantidad_premios) {
@@ -635,14 +623,32 @@ router.post('/administrador/rifas/revertir-ganador/:ganadorId', async (req, res)
       .delete()
       .eq('rifa_id', ganador.rifa_id)
       .eq('orden', ganador.orden);
+    
+    /* VER CUÁNTOS GANADORES QUEDAN */
+    const { data: ganadoresRestantes, error: errRestantes } = await supabase
+      .from('ganadores')
+      .select('id_ganadores')
+      .eq('rifa_id', ganador.rifa_id);
 
-    /* Reabrir rifa si estaba cerrada */
+    if (errRestantes) throw errRestantes;
+
+    /* ACTUALIZAR ESTADO DE LA RIFA */
+    let nuevoEstado = 'activa';
+
+    if (ganadoresRestantes.length > 0) {
+      nuevoEstado = 'en_proceso';
+    }
+
     await supabase
       .from('rifas')
-      .update({ estado: 'activa' })
+      .update({ estado: nuevoEstado })
       .eq('id_rifas', ganador.rifa_id);
 
-    res.json({ mensaje: 'Ganador revertido correctamente' });
+    /* RESPUESTA */
+    res.json({
+      mensaje: 'Ganador revertido correctamente',
+      estado_rifa: nuevoEstado
+    });
 
   } catch (error) {
     console.error(error);
