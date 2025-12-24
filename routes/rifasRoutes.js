@@ -90,7 +90,25 @@ router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (re
 // Listar rifas
 router.get('/administrador/listarRifas', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('rifas').select('*').order('id_rifas', { ascending: false });
+    const { data, error } = await supabase.rpc('listar_rifas_ordenadas');
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+});
+
+//Listar rifas para los ganadores 'activo' - 'en_proceso'
+router.get('/administrador/rifas/ganadores', async (req, res) => {
+  try {
+    const {data, error} = await supabase
+      .from('rifas')
+      .select('*')
+      .eq('estado', "en_proceso")
+      .eq('estado', "sorteada")
+      .order('id_rifas', { ascending: false });
+
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -328,7 +346,6 @@ router.delete('/administrador/eliminarRifa/:id', async (req, res) => {
   }
 });
 
-
 // Obtener boletos de una rifa
 router.get('/administrador/rifas/boletos/:id', async (req, res) => {
   try {
@@ -524,7 +541,6 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
 
       if (errFinalizar) throw errFinalizar;
     }
-
 
     /* =====================================
        RESPUESTA
