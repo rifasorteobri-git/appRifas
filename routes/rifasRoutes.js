@@ -99,7 +99,23 @@ router.get('/administrador/listarRifas', async (req, res) => {
   }
 });
 
-//Listar rifas para los ganadores 'activo' - 'en_proceso'
+// Listar rifas para vender boletos 'activa'
+router.get('/administrador/rifas/venderBoletos', async (req, res) => {
+  try {
+    const {data, error} = await supabase
+      .from('rifas')
+      .select('*')
+      .eq('estado', "activa")
+      .order('id_rifas', { ascending: false })
+    
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: err.message || err });
+  }
+})
+
+//Listar rifas para los ganadores 'activa' - 'en_proceso'
 router.get('/administrador/rifas/ganadores', async (req, res) => {
   try {
     const { data, error } = await supabase
