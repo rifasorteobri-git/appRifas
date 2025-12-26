@@ -564,7 +564,8 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
       mensaje: 'Sorteo realizado correctamente',
       premio: {
         orden: ordenPremio,
-        nombre: producto.nombre_producto
+        nombre: producto.nombre_producto,
+        imagen: producto.url_imagen_producto
       },
       ganador: {
         numero: ganador.numero_boleto,
