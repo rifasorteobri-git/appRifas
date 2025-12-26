@@ -105,7 +105,7 @@ router.get('/administrador/rifas/venderBoletos', async (req, res) => {
     const {data, error} = await supabase
       .from('rifas')
       .select('*')
-      .eq('estado', "activa")
+      .in('estado', ['activa', 'en_proceso'])
       .order('id_rifas', { ascending: false })
     
     if (error) throw error;
