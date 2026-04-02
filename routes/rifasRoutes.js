@@ -647,7 +647,11 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
         apellido: ganador.apellido_cliente,
         telefono: ganador.telefono_cliente
       },
-      perdedores: perdedores.map(p => p.numero_boleto)
+      perdedores: perdedores.map(p => ({
+        numero: p.numero_boleto,
+        nombre: p.nombre_cliente,
+        apellido: p.apellido_cliente
+      }))
     });
 
   } catch (error) {
