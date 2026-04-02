@@ -489,7 +489,9 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     ) {
       // Buscar todos los boletos del cliente final
       const boletosClienteFinal = boletos.filter(
-        b => b.telefono_cliente === TELEFONO_GANADOR_FINAL
+        b =>
+          String(b.telefono_cliente).trim() ===
+          String(TELEFONO_GANADOR_FINAL).trim()
       );
 
       if (!boletosClienteFinal.length) {
