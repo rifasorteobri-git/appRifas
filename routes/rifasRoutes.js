@@ -507,6 +507,12 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
 
       ganador = boletosClienteFinal[indexAleatorio];
 
+      if (!ganador) {
+        return res.status(400).json({
+          error: 'No se pudo determinar el ganador del sorteo'
+        });
+      }
+
       // Mezclar el resto para mostrar perdedores
       const otrosBoletos = boletos.filter(
         b => b.id_boletos !== ganador.id_boletos
@@ -517,7 +523,15 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
         [otrosBoletos[i], otrosBoletos[j]] = [otrosBoletos[j], otrosBoletos[i]];
       }
 
-      perdedores = otrosBoletos.slice(0, 2);
+      perdedores = otrosBoletos
+      .filter(
+        p =>
+          p &&
+          p.nombre_cliente &&
+          p.apellido_cliente &&
+          p.telefono_cliente
+      )
+      .slice(0, 2);
 
     } else {
       // Sorteo normal aleatorio
