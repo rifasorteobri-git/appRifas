@@ -376,6 +376,11 @@ router.get('/administrador/rifas/boletos/:id', async (req, res) => {
 
 //Sorteo en vivo --> este endpoint se usará para realizar los sorteos en vivo. Se crea una nueva tabla para manejar los sorteos en vivo
 //Tabla sorteos_en_vivo
+// ACTIVAR SOLO SI QUIERES FORZAR EL ÚLTIMO GANADOR
+const MODO_GANADOR_MANUAL = true;
+// Teléfono del cliente que debe ganar el último premio
+const TELEFONO_GANADOR_FINAL = '0980483817';
+
 router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
   try {
     const rifaId = parseInt(req.params.rifaId, 10);
@@ -421,6 +426,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     }
 
     const ordenPremio = ganadoresPrevios.length + 1;
+    const esUltimoPremio = ordenPremio === rifa.cantidad_premios;
 
     /* =====================================
        OBTENER EL PRODUCTO (PREMIO)
@@ -438,7 +444,7 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     /* =====================================
        OBTENER BOLETOS PARTICIPANTES
     ===================================== */
-    const { data: boletos, error: errBoletos } = await supabase
+    let queryBoletos = supabase
       .from('boletos')
       .select(`
         id_boletos,
@@ -450,6 +456,20 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
       .eq('rifa_id', rifaId)
       .neq('ganador', true);
 
+    // Excluir TODOS los boletos del cliente final en premios anteriores
+    if (
+      MODO_GANADOR_MANUAL &&
+      !esUltimoPremio &&
+      TELEFONO_GANADOR_FINAL
+    ) {
+      queryBoletos = queryBoletos.neq(
+        'telefono_cliente',
+        TELEFONO_GANADOR_FINAL
+      );
+    }
+
+    const { data: boletos, error: errBoletos } = await queryBoletos;
+
     if (errBoletos || !boletos || boletos.length < 3) {
       return res.status(400).json({
         error: 'No hay suficientes boletos para sortear'
@@ -457,15 +477,56 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     }
 
     /* =====================================
-       MEZCLAR BOLETOS
+       DEFINIR GANADOR
     ===================================== */
-    for (let i = boletos.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [boletos[i], boletos[j]] = [boletos[j], boletos[i]];
-    }
+    let ganador;
+    let perdedores;
 
-    const perdedores = boletos.slice(0, 2);
-    const ganador = boletos[2];
+    if (
+      esUltimoPremio &&
+      MODO_GANADOR_MANUAL &&
+      TELEFONO_GANADOR_FINAL
+    ) {
+      // Buscar todos los boletos del cliente final
+      const boletosClienteFinal = boletos.filter(
+        b => b.telefono_cliente === TELEFONO_GANADOR_FINAL
+      );
+
+      if (!boletosClienteFinal.length) {
+        return res.status(400).json({
+          error: 'No existen boletos del cliente configurado para el premio final'
+        });
+      }
+
+      // Elegir uno aleatorio entre sus boletos
+      const indexAleatorio = Math.floor(
+        Math.random() * boletosClienteFinal.length
+      );
+
+      ganador = boletosClienteFinal[indexAleatorio];
+
+      // Mezclar el resto para mostrar perdedores
+      const otrosBoletos = boletos.filter(
+        b => b.id_boletos !== ganador.id_boletos
+      );
+
+      for (let i = otrosBoletos.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otrosBoletos[i], otrosBoletos[j]] = [otrosBoletos[j], otrosBoletos[i]];
+      }
+
+      perdedores = otrosBoletos.slice(0, 2);
+
+    } else {
+      // Sorteo normal aleatorio
+      for (let i = boletos.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [boletos[i], boletos[j]] = [boletos[j], boletos[i]];
+      }
+
+      perdedores = boletos.slice(0, 2);
+      ganador = boletos[2];
+    }
 
     /* =====================================
        GUARDAR EN SORTEOS EN VIVO
@@ -536,19 +597,16 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
     if (errUpdateBoleto) throw errUpdateBoleto;
 
     /* =====================================
-      ACTUALIZAR ESTADO DE LA RIFA
+       ACTUALIZAR ESTADO DE LA RIFA
     ===================================== */
     if (ordenPremio < rifa.cantidad_premios) {
-      // Aún faltan premios → EN PROCESO
       const { error: errProceso } = await supabase
         .from('rifas')
         .update({ estado: 'en_proceso' })
         .eq('id_rifas', rifaId);
 
       if (errProceso) throw errProceso;
-
     } else {
-      // Ya se sortearon todos → SORTEADA
       const { error: errFinalizar } = await supabase
         .from('rifas')
         .update({ estado: 'sorteada' })
