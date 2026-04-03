@@ -1,3 +1,5 @@
+const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
+
 //función para generar boletos nuevos
 async function generarBoletosNuevos(rifaId, cantidad) {
   if (!Number.isInteger(cantidad) || cantidad < 1) {
