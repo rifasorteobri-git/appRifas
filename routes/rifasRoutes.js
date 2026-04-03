@@ -4,7 +4,7 @@ const router = express.Router();
 //llamada a la conexion de la base de datos
 const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
 const generarBoletos = require('../utils/generarBoletos');
-const generarBoletosNuevos = require('../utils/generarBoletos')
+const generarBoletosNuevos = require('../utils/generarBoletosNuevos')
 const sharp = require('sharp'); //Necesario para convertir el buffer
 const multer = require('multer');
 const upload = multer(); // Usamos memoria (sin archivos físicos)
