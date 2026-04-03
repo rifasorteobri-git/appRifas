@@ -4,6 +4,7 @@ const router = express.Router();
 //llamada a la conexion de la base de datos
 const supabase = require('../db/supabaseClient'); //conexión a Supabase API (service_role)
 const generarBoletos = require('../utils/generarBoletos');
+const generarBoletosNuevos = require('../utils/generarBoletos')
 const sharp = require('sharp'); //Necesario para convertir el buffer
 const multer = require('multer');
 const upload = multer(); // Usamos memoria (sin archivos físicos)
@@ -52,7 +53,7 @@ router.post('/administrador/crearRifas', upload.single('imagenRifas'), async (re
     const { titulo, cantidad_boletos, descripcion, condicion, precio, cantidad_premios } = req.body;
     const n = parseInt(cantidad_boletos, 10);
     
-    if (!titulo || !descripcion || !urlPublica || !imagenNombreRifa || !condicion || !precio || !cantidad_premios || isNaN(n) || n < 1 || n > 1000) return res.status(400).json({ error: 'Datos inválidos' });
+    if (!titulo || !descripcion || !urlPublica || !imagenNombreRifa || !condicion || !precio || !cantidad_premios || isNaN(n) || n < 1 || n > 900) return res.status(400).json({ error: 'Datos inválidos' });
 
     // crear rifa
     const { data: rifa, error: errR } = await supabase
@@ -246,7 +247,10 @@ router.put('/administrador/editarRifa/:id', upload.single('imagenRifas'), async 
       const cantidadNueva = nuevoTotal - actualTotal;
 
       // Generar nuevos boletos con la misma lógica del backend
-      const nuevosNumeros = generarBoletos(cantidadNueva);
+      const nuevosNumeros = await generarBoletosNuevos(
+        id,
+        cantidadNueva
+      );
 
       // Llamar RPC de aumento
       const { data: aumento, error: errAumento } = await supabase.rpc(
