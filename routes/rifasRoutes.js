@@ -518,8 +518,14 @@ router.post('/administrador/rifas/sorteo-en-vivo/:rifaId', async (req, res) => {
       }
 
       // Mezclar el resto para mostrar perdedores
-      const otrosBoletos = boletos.filter(
+      /*const otrosBoletos = boletos.filter(
         b => b.id_boletos !== ganador.id_boletos
+      );*/
+      const otrosBoletos = boletos.filter(
+        b =>
+          b.id_boletos !== ganador.id_boletos &&
+          String(b.telefono_cliente).trim() !==
+            String(TELEFONO_GANADOR_FINAL).trim()
       );
 
       for (let i = otrosBoletos.length - 1; i > 0; i--) {
